@@ -97,8 +97,26 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"content\": \"Pipeline $STATUT sur ${{ github.sha }}\"}"
 
-  push-image:
+  scan-image:
     needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer l'image testée
+        uses: actions/download-artifact@v4
+        with:
+          name: mon-app-image
+      - name: Charger l'image
+        run: docker load -i mon-app.tar
+      - name: Scanner avec Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: mon-app:ci
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+
+  push-image:
+    needs: [build-and-test, run-tests, scan-image]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
