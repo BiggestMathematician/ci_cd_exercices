@@ -108,7 +108,7 @@ jobs:
       - name: Charger l'image
         run: docker load -i mon-app.tar
       - name: Scanner avec Trivy
-        uses: aquasecurity/trivy-action@v0.76.2
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: mon-app:ci
           severity: CRITICAL,HIGH
