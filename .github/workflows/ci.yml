@@ -89,11 +89,17 @@ jobs:
     needs: [build-and-test, run-tests]
     if: always()
     runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
     steps:
       - name: Notifier Discord du résultat
         run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "::warning::Secret DISCORD_WEBHOOK_URL non configuré, notification ignorée."
+            exit 0
+          fi
           STATUT="${{ contains(needs.*.result, 'failure') && 'failure' || 'success' }}"
-          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+          curl --fail-with-body --silent --show-error -X POST "$DISCORD_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "{\"content\": \"Pipeline $STATUT sur ${{ github.sha }}\"}"
 
@@ -136,7 +142,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Retagger et publier
         run: |
-          docker tag mon-app:ci ghcr.io/${{ github.repository }}:latest
-          docker tag mon-app:ci ghcr.io/${{ github.repository }}:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository }}:latest
-          docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
+          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}"
+          docker tag mon-app:ci "$IMAGE_NAME:latest"
+          docker tag mon-app:ci "$IMAGE_NAME:${{ github.sha }}"
+          docker push "$IMAGE_NAME:latest"
+          docker push "$IMAGE_NAME:${{ github.sha }}"
